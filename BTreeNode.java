@@ -53,4 +53,13 @@ class BTreeNode {
     public int getMidpointIndex() {
         return this.t;
     }
+    public long getValue ( long id) {
+    	int j=0;
+    	for (j = 0; j < n; j++) {
+            if (keys[j] == id) {
+            	return values[j];
+            }
+        }
+        return -1;
+    }
 }
