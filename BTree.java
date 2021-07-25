@@ -23,13 +23,26 @@ class BTree {
     }
 
     long search(long studentId) {
-        /**
-         * TODO:
-         * Implement this function to search in the B+Tree.
-         * Return recordID for the given StudentID.
-         * Otherwise, print out a message that the given studentId has not been found in the table and return -1.
-         */
-        return -1;
+        long search(long studentId) {
+    	//start at root
+    	BTreeNode curNode = root;
+    	//init check that root is not null
+    	if (curNode == null) {
+    		return -1;
+    	}
+    	int i = 0;
+    	//traverse all the non-leaves until studentID is less than key
+    	while ((!(curNode.leaf))) { //&& curNode.next != null) {
+    		for (i = 0; i < curNode.n; i++) {
+    			if (studentId < curNode.keys[i]) {
+    				break;
+    			}
+    		}
+    		//grab children value
+    		curNode = curNode.children[i];
+    	}
+    	return curNode.getValue(studentId);
+        //return -1;
     }
 
     BTree insert(Student student) {
