@@ -56,8 +56,21 @@ public class BTreeMain {
                             int age = Integer.parseInt(s2.next());
                             
                             /*Write a logic to generate recordID*/
-                            Random r = new Random();
-                            long recordID = (long) r.nextInt(1000000000 - 1) + 1;  //up to 10 digit number
+                            boolean rIDFound = false;
+                            
+                            Random r = new Random(); 
+                            long recordID;
+                            //loop to make sure we don't happen to use a record ID already in use
+                            do {
+                            	recordID = (long) r.nextInt(1000000000 - 1) + 1;  //up to 10 digit number
+                            	
+                            	for (Student stud : studentsDB) {
+                            		//System.out.println("random: " + recordID + " student rID: " + stud.recordId);
+                            		if (recordID == stud.recordId) {
+                            			rIDFound = true;
+                            		}
+                            	}
+                            } while (rIDFound);
 
                             Student s = new Student(studentId, age, studentName, major, level, recordID);
                             bTree.insert(s);
@@ -100,11 +113,6 @@ public class BTreeMain {
     }
 
     private static List<Student> getStudents() {
-
-        /** TODO:
-         * Extract the students information from "Students.csv"
-         * return the list<Students>
-         */
         List<Student> studentList = new ArrayList<>();
         
         long sID;  //student ID
