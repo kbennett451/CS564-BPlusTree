@@ -29,19 +29,50 @@ class BTree {
     	if (curNode == null) {
     		return -1;
     	}
-    	int i = 0;
-    	//traverse all the non-leaves until studentID is less than key
-    	while ((!(curNode.leaf))) { //&& curNode.next != null) {
-    		for (i = 0; i < curNode.n; i++) {
-    			if (studentId < curNode.keys[i]) {
-    				break;
-    			}
-    		}
-    		//grab children value
-    		curNode = curNode.children[i];
+    	
+    	BTreeNode foundNode = searchRecursive(curNode, studentId);
+    	if (foundNode == null) {
+    		return -1;
     	}
-    	return curNode.getValue(studentId);
-        //return -1;
+    	return foundNode.getValue(studentId);
+    }
+    private BTreeNode searchRecursive (BTreeNode node, long studentId) {
+    	if (node == null) { // the leaf node has not been created yet
+            return null;
+        }
+        if (node.leaf) { // we found an appropriate leaf node
+            for (int i = 0; i <node.n; i++) {
+            	if (studentId == node.keys[i]) {
+            		return node;
+            	}
+            }
+        }
+        else { // this is an internal node
+            for (int i = node.n; i >= 0; i--) {
+            	if ((studentId >= node.keys[i]) && (node.children[i+1] != null) && (node.keys[i] > 0)) {
+                	BTreeNode childNode = searchRecursive(node.children[i+1], studentId);
+                    if (childNode == null) {
+                    	return null;
+                    }
+                    else {
+                        return childNode;
+                    }
+                }
+            	else if ((studentId < node.keys[i]) && (i==0) && (node.children[i] != null)) {
+                    BTreeNode childNode = searchRecursive(node.children[i], studentId);
+                    if (childNode == null) {
+                    	return null;
+                    }
+                    
+                    else {
+                        
+                        return childNode;
+                    }
+                }
+            }
+        }
+        
+    	return null;
     }
 
     BTree insert(Student student) {
