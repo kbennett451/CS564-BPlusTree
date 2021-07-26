@@ -53,13 +53,18 @@ class BTreeNode {
     public int getMidpointIndex() {
         return this.t;
     }
-    public long getValue ( long id) {
-    	int j=0;
-    	for (j = 0; j < n; j++) {
-            if (keys[j] == id) {
-            	return values[j];
+
+    /**
+     * Determines whether this node has the key in question
+     * @param key - the key we're looking for
+     * @return true if the key already exists in the node
+     */
+    public boolean hasKey(long key) {
+        for (int i = 0; i < this.n; i++) {
+            if (key <= this.keys[i]) { // use less than or equal since the node will be sorted
+                return true;
             }
         }
-        return -1;
+        return false;
     }
 }
