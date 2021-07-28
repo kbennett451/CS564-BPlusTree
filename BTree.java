@@ -323,6 +323,7 @@ class BTree {
             System.out.println("File not found.");
         }
         return false;
+    }
 
     private BTreeNode findParentNode (BTreeNode node, BTreeNode parentNode, long studentId) {
     	if (node == null) { // the leaf node has not been created yet
@@ -361,6 +362,32 @@ class BTree {
         }
         
     	return null;
+    }
+    private BTreeNode findParentFromRoot (BTreeNode node, BTreeNode indexNode, long indexVal) {
+    	if (node == null) { // the leaf node has not been created yet
+            return null;
+        }
+    	for (int i = node.n; i>=0; i--) {
+    		if ((indexVal >= node.keys[i] && node.keys[i]>0) ) {
+    			if (node.children[i+1]==indexNode) {
+    				return node;
+    			}
+    			else {
+    				System.out.println("idx: "+node.children[i].keys[0]+"|"+indexVal+"|"+node.keys[i]);
+    				return findParentFromRoot(node.children[i],indexNode,indexVal);
+    			}
+    		}
+    		else if ((indexVal < node.keys[i]) && (i==0)) {
+    			if (node.children[i]==indexNode) {
+    				return node;
+    			}
+    			else {
+    				return findParentFromRoot(node.children[i],indexNode,indexVal);
+    			}
+    		}
+    	}
+    	return null;
+    	
     }
     
     private int parentToChildKey (BTreeNode parentNode, BTreeNode node, long value) {
@@ -546,13 +573,15 @@ class BTree {
     		int childKey = parentToChildKey(parent, foundNode,studentId);
     		//balance (parent, childKey, childKey-1); //TODO: delete
     		
-    		if (childKey<1 && parent.n>1 ) {//left-most so need to try with right sibling
+    		if (childKey<1 && parent.n>0 ) {//left-most so need to try with right sibling
     			if (canRedistribute(parent, childKey, childKey+1)) {
     				balance(parent,childKey,childKey+1);
+				propogateKeyUp(parent,foundNode,parent.keys[0]);
     			}
     			else {
     				mergeNodesOnDelete (parent, childKey, childKey+1);
     				needsRebalance=true;
+				propogateKeyUp(parent,foundNode,parent.keys[0]);
     			}
     		}
     		else if (childKey < parent.n && parent.keys[childKey+1]>0) {  //has right sibling, try first
@@ -583,8 +612,10 @@ class BTree {
     		propogateKeyUp(parent,foundNode,studentId);
     	}
     	if (parent != root && parent.n<parent.t && needsRebalance) {
-    		BTreeNode grandParent = findParentNode(parent,parent,parent.keys[0]);
-    		return deleteRecursive(grandParent,parent,parent.keys[0],origKey);
+    		BTreeNode grandParent = findParentFromRoot(root,parent,parent.keys[0]);
+    		//System.out.println("grand: " + grandParent.keys[0]);
+    		if (grandParent==null) {return false;}
+    		return deleteRecursive(grandParent,parent,parent.keys[1],origKey);
     	}
     	return true;
     }
