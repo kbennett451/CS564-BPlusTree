@@ -262,13 +262,280 @@ class BTree {
         return newNode;
     }
 
+    private BTreeNode findParentNode (BTreeNode node, BTreeNode parentNode, long studentId) {
+    	if (node == null) { // the leaf node has not been created yet
+            return null;
+        }
+        if (node.leaf) { // we found an appropriate leaf node
+            for (int i = 0; i <node.n; i++) {
+            	if (studentId == node.keys[i]) {
+            		return parentNode;
+            	}
+            }
+        }
+        else { // this is an internal node
+            for (int i = node.n; i >= 0; i--) {
+            	if ((studentId >= node.keys[i]) && (node.children[i+1] != null) && (node.keys[i] > 0)) {
+                	BTreeNode childNode = findParentNode(node.children[i+1], node, studentId);
+                    if (childNode == null) {
+                    	return null;
+                    }
+                    else {
+                        return childNode;
+                    }
+                }
+            	else if ((studentId < node.keys[i]) && (i==0) && (node.children[i] != null)) {
+                    BTreeNode childNode = findParentNode(node.children[i], node, studentId);
+                    if (childNode == null) {
+                    	return null;
+                    }
+                    
+                    else {
+                        
+                        return childNode;
+                    }
+                }
+            }
+        }
+        
+    	return null;
+    }
+    
+    private int parentToChildKey (BTreeNode parentNode, BTreeNode node, long value) {
+    	int childKey=0;
+    	for (int i = parentNode.n; i >= 0; i--) {
+        	if (value >= parentNode.keys[i] && parentNode.keys[i] >0) {
+            	return i+1;
+        	}
+    	}
+    	return childKey;
+    }
+    
+    private boolean canRedistribute (BTreeNode parentNode, int currChild, int sibling) {
+    	int joinedKeyCount = parentNode.children[currChild].n + parentNode.children[sibling].n;
+    	//int joinedMinKeyCnt = (parentNode.children[currChild].t)/2 +1 + ((parentNode.children[sibling].t)/2) + 1;
+    	int joinedMinKeyCnt = (parentNode.children[currChild].t)-1 + ((parentNode.children[sibling].t) -1 );
+    	//System.out.println(parentNode.children[3].keys[2] +"|" + parentNode.children[currChild].n + "|" + parentNode.children[sibling].n + "|joined key count: " + joinedKeyCount + "|joinedMinKeyCnt: " + joinedMinKeyCnt);
+    	if (joinedKeyCount<= joinedMinKeyCnt) {
+    		return false;
+    	}
+    	return true;
+    }
+    private void balance(BTreeNode parentNode, int currChild, int sibling) {
+    	int leftNode,rightNode=0;
+    	if (currChild>sibling) {
+    		leftNode=sibling;
+    		rightNode=currChild;
+    	}
+    	else {
+    		leftNode=currChild;
+    		rightNode=sibling;
+    	}
+    	if (currChild > sibling) {  //node where we did removal is to the right
+    		//BTreeNode copy = parentNode.children[currChild];
+    		//parentNode.children[currChild].clearNode();
+    		int i,j = 0 ;
+    		int sibStart=(parentNode.children[sibling].t-1);
+    		int sibMax=parentNode.children[sibling].n;
+    		int offSet = sibMax-sibStart;
+    		int currNum=parentNode.children[currChild].n;
+    		
+    		for (i=0; i<currNum; i++) {
+    			
+    			parentNode.children[currChild].keys[i+offSet] = parentNode.children[currChild].keys[i];
+    			parentNode.children[currChild].values[i+offSet] = parentNode.children[currChild].values[i];
+    			//parentNode.children[currChild].n++;
+    		}
+    		for (i=sibStart; i<sibMax; i++, j++) {
+    			parentNode.children[currChild].keys[j] = parentNode.children[sibling].keys[i];
+    			parentNode.children[currChild].values[j] = parentNode.children[sibling].values[i];
+    			//parentNode.children[currChild].n++;
+    			parentNode.children[sibling].keys[i]=0;
+    			parentNode.children[sibling].values[i]=0;
+    		}
+    		parentNode.children[currChild].n=currNum+offSet;
+    		//update parent node key
+    		parentNode.keys[currChild-1]=parentNode.children[currChild].keys[0];
+    		parentNode.children[sibling].n=sibStart;
+    		
+    	}
+    	else {//currChild on LEFT and is leftNode
+    		int i,j = 0 ;
+    		int shrinkStart=(parentNode.children[leftNode].n);
+    		int shrinkMax=(parentNode.children[leftNode].t-1);
+    		int sibMax=parentNode.children[rightNode].n;
+    		int offSet = shrinkMax-shrinkStart;
+    		int currNum=parentNode.children[rightNode].n;
+    		//int shrinkCurrNum=parentNode.children[leftNode].n;
+    		int preOffSet,postOffSet = 0;
+    		if (currChild==rightNode) {
+    			preOffSet=offSet;
+    		}
+    		else {
+    			postOffSet=offSet;
+    		}
+
+    		System.out.println("BALANCE BEF: "+ parentNode.children[leftNode].n + "|" + shrinkStart + "|" + sibMax + "|" + currNum);
+    		for (i=shrinkStart; i<shrinkMax; i++, j++) {
+    			parentNode.children[leftNode].keys[i] = parentNode.children[rightNode].keys[j];
+    			parentNode.children[leftNode].values[i] = parentNode.children[rightNode].values[j];
+    		}
+    		for (i=offSet; i<currNum; i++) {
+    			
+    			parentNode.children[rightNode].keys[i-offSet] = parentNode.children[rightNode].keys[i];
+    			parentNode.children[rightNode].values[i-offSet] = parentNode.children[rightNode].values[i];
+    			//parentNode.children[leftNode].n++;
+    		}
+    		for (i=(currNum-offSet); i<currNum; i++) {
+    			
+    			parentNode.children[rightNode].keys[i] = 0; 
+    			parentNode.children[rightNode].values[i] = 0;
+    			//parentNode.children[leftNode].n++;
+    		}
+    		parentNode.children[leftNode].n=shrinkMax;
+    		//update parent node key
+    		parentNode.keys[rightNode-1]=parentNode.children[rightNode].keys[0];
+    		parentNode.children[rightNode].n=currNum-offSet;
+    	}
+    }
+    boolean mergeNodesOnDelete(BTreeNode parentNode, int currChild, int sibling) {
+    	int smaller=0,larger=0;
+    	if (currChild>sibling) {
+    		smaller=sibling;
+    		larger=currChild;
+    	}
+    	else {
+    		smaller=currChild;
+    		larger=sibling;
+    	}
+    	//merge keys:
+    	long oldKey = parentNode.keys[1];
+		int smallerNum=parentNode.children[smaller].n;
+		int largerNum=parentNode.children[larger].n;
+		
+		for (int i=0; i<largerNum; i++) {
+			parentNode.children[smaller].keys[i+smallerNum] = parentNode.children[larger].keys[i];
+			if (parentNode.children[smaller].leaf) {
+				parentNode.children[smaller].values[i+smallerNum] = parentNode.children[larger].values[i];
+			}
+		}
+		parentNode.children[larger].clearNode();
+		parentNode.children[larger]=parentNode.children[larger+1]; //remove?
+		parentNode.children[smaller].n=smallerNum+largerNum;
+    	//handle action on parent node
+    	if (smaller>0 ) {
+    		
+    		parentNode.keys[smaller]=parentNode.children[smaller+1].keys[0];
+    	}
+    	else if (larger<2) {
+    		//propogateKeyUp(parentNode,parentNode.children[1],parentNode.keys[0]); broken
+    	}
+    	//shift parent nodes left
+    	if (larger<parentNode.n) {
+	    	for (int i=larger; i<parentNode.n; i++) {
+				parentNode.keys[i-1] = parentNode.keys[i];
+				parentNode.children[i-1] = parentNode.children[i];
+			}
+	    	if (smaller==0) {
+	    		//BTreeNode grandParent = findParentNode(parentNode,parentNode,parentNode.keys[0]); broken for now
+	    		//propogateKeyUp(grandParent,parentNode,oldKey);
+	    	}
+    	}
+    	
+    	//make last node 0 and reduce count
+    	parentNode.keys[(parentNode.n)-1]= 0;
+    	parentNode.children[parentNode.n] = null;
+    	parentNode.n--;
+		
+    	return true;
+    }
+
     boolean delete(long studentId) {
-        /**
-         * TODO: Implement this function to delete in the B+Tree.
-         * Also, delete in student.csv after deleting in B+Tree, if it exists.
-         * Return true if the student is deleted successfully otherwise, return false.
-         */
-        return true;
+    	BTreeNode curNode = root;
+    	//init check that root is not null
+    	if (curNode == null) {
+    		return false;
+    	}
+    	
+    	BTreeNode foundNode = searchRecursive(curNode, studentId);
+    	BTreeNode parent = findParentNode(curNode,curNode,studentId);
+    	if (foundNode == null) {
+    		return false;
+    	}
+    	
+    	//remove node then do the rest
+    	if ( foundNode.removeValue(studentId) == false) {return false;}
+    	
+    	deleteRecursive(parent,foundNode,studentId,studentId);
+    	if (foundNode == root && !root.leaf && root.n == 0) {
+            root = root.children[0];
+    	}
+    	
+    	return true;
+    }
+    boolean deleteRecursive(BTreeNode parent, BTreeNode foundNode, long studentId, long origKey) {
+    	if (foundNode == root) {
+    		return false;
+    	}
+    	boolean needsRebalance = false;
+    	int keyForVal = parent.keyForValue(origKey);
+    	if (!foundNode.hasMinPopulation()) {  //not populated enough, need to rebalance or merge
+    		int childKey = parentToChildKey(parent, foundNode,studentId);
+    		//balance (parent, childKey, childKey-1); //TODO: delete
+    		
+    		if (childKey<1 && parent.n>1 ) {//left-most so need to try with right sibling
+    			if (canRedistribute(parent, childKey, childKey+1)) {
+    				balance(parent,childKey,childKey+1);
+    			}
+    			else {
+    				mergeNodesOnDelete (parent, childKey, childKey+1);
+    				needsRebalance=true;
+    			}
+    		}
+    		else if (childKey < parent.n && parent.keys[childKey+1]>0) {  //has right sibling, try first
+    			if (canRedistribute(parent, childKey, childKey+1)) {
+    				balance (parent, childKey, childKey+1);
+    			}
+    			else if (canRedistribute(parent, childKey, childKey-1)) {
+    				balance (parent, childKey, childKey-1);
+    			}
+    			else {//merge with right by default if inner
+    				mergeNodesOnDelete (parent, childKey, childKey+1);
+    				needsRebalance=true;
+    			}
+    		}
+    		else {
+    			//right-most so must try left
+    			if (canRedistribute(parent, childKey, childKey-1)) {
+    				balance (parent, childKey, childKey-1);
+    			}
+    			else {
+    				mergeNodesOnDelete (parent, childKey, childKey-1);
+    				needsRebalance=true;
+    			}
+    		}
+    	}
+    	else if(keyForVal>-1) { 
+
+    		propogateKeyUp(parent,foundNode,studentId);
+    	}
+    	if (parent != root && parent.n<parent.t && needsRebalance) {
+    		BTreeNode grandParent = findParentNode(parent,parent,parent.keys[0]);
+    		return deleteRecursive(grandParent,parent,parent.keys[0],origKey);
+    	}
+    	return true;
+    }
+    private void propogateKeyUp(BTreeNode parent, BTreeNode node, long key) {
+    	//needs to be fixed- 
+    	
+    	int keyForVal = node.keyForValue(key);
+    	if(keyForVal>-1) { 
+    		parent.keys[keyForVal] = node.keys[0]; //set to min value from found Node
+    		if (keyForVal==1) {
+    			BTreeNode grandParent = findParentNode(parent,parent,parent.keys[0]);
+    			propogateKeyUp(grandParent, parent, parent.keys[0]);
+    		}
+    	}
     }
 
     /**
